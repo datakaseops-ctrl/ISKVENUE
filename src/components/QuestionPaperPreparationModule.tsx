@@ -439,20 +439,8 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
           </div>
         </div>
 
-        {/* Optional Institution / Nodal Officer Metadata */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-stone-100 text-xs">
-          <div>
-            <label className="block font-semibold text-stone-700 mb-1">
-              Institution / Committee Name
-            </label>
-            <input
-              type="text"
-              value={institutionName}
-              onChange={(e) => setInstitutionName(e.target.value)}
-              placeholder="e.g. State Curriculum Committee"
-              className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none focus:border-[#0e5774]"
-            />
-          </div>
+        {/* Coordinating Officer Metadata */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-stone-100 text-xs">
           <div>
             <label className="block font-semibold text-stone-700 mb-1">
               Coordinating Officer
@@ -650,7 +638,7 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
         </div>
 
         {/* Vertical Skills List */}
-        <div className="divide-y divide-stone-200 max-h-[640px] overflow-y-auto">
+        <div className="relative divide-y divide-stone-200 max-h-[640px] overflow-y-auto">
           {visibleSkills.length === 0 ? (
             <div className="p-10 text-center text-xs text-stone-500">
               No skills match the current filter.
@@ -697,22 +685,16 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
                     {COMPETITION_LEVELS.map((level) => {
                       const isChecked = selectedLevels.includes(level);
                       return (
-                        <label
+                        <button
                           key={level}
+                          type="button"
                           onClick={() => handleToggleLevel(skill, level)}
-                          className={`min-h-[40px] px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1.5 cursor-pointer select-none transition-all ${
+                          className={`relative min-h-[40px] px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1.5 cursor-pointer select-none transition-all ${
                             isChecked
                               ? 'border-[#0e5774] bg-[#0e5774] text-white font-semibold shadow-xs'
                               : 'border-stone-200 bg-white hover:border-stone-400 text-stone-700'
                           }`}
                         >
-                          <input
-                            type={inputMode}
-                            name={`qp-${skill}`}
-                            checked={isChecked}
-                            onChange={() => {}}
-                            className="sr-only"
-                          />
                           {inputMode === 'radio' ? (
                             <span
                               className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
@@ -731,7 +713,7 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
                             </span>
                           )}
                           <span className="text-[11px] truncate">{level}</span>
-                        </label>
+                        </button>
                       );
                     })}
 
