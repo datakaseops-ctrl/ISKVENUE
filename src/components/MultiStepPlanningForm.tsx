@@ -14,11 +14,9 @@ import { ScreeningExamStageEditor } from './ScreeningExamStageEditor';
 import { formatIndianCurrency, numberToIndianWords } from '../utils/numberToWords';
 
 /**
- * BACKEND CONFIGURATION (Hidden from end-users):
- * Paste your deployed Google Apps Script Web App URL (ending in /exec) below
- * or set VITE_GAS_WEB_APP_URL in your Vercel Environment Variables.
+ * Predefined Backend Endpoint URL (Hidden from end-users)
  */
-const BACKEND_WEB_APP_URL: string = import.meta.env.VITE_GAS_WEB_APP_URL || '';
+const BACKEND_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxVz4IN8XGrZ3uxlTvIWsJ4U_NWm8oyS4zFSx42dntF4lsBmZgB-E5F9KYd3mrXP4wp9Q/exec';
 
 interface MultiStepPlanningFormProps {
   gasUrl?: string;
@@ -27,7 +25,6 @@ interface MultiStepPlanningFormProps {
 }
 
 export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
-  gasUrl,
   onSubmissionSuccess
 }) => {
   // Wizard Step: 1 = Department & Trades, 2 = District & Taluk Online Exam Centers & Direct Submit
@@ -46,8 +43,6 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [stepValidationError, setStepValidationError] = useState<string | null>(null);
-  const [needsEndpointSetup, setNeedsEndpointSetup] = useState(false);
-  const [setupUrlInput, setSetupUrlInput] = useState('');
 
   // Step 1: Department selection
   const handleSelectDepartment = (dept: "Directorate of Technical Education (DTE)" | "Industrial Training Department (ITD)") => {
@@ -130,7 +125,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   const totalComputersAvailable = planState.screeningAllocations.reduce((acc, a) => acc + (Number(a.numberOfComputers) || 0), 0);
 
   // Direct Submission from Step 2 (District Exam Centers)
-  const handleDirectSubmit = async (overrideEndpointUrl?: string) => {
+  const handleDirectSubmit = async () => {
     setStepValidationError(null);
     setSubmissionError(null);
 
@@ -150,24 +145,6 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
-    }
-
-    const storedUrl = localStorage.getItem('dte_itd_multistage_gas_url') || '';
-    const targetUrl = (overrideEndpointUrl || BACKEND_WEB_APP_URL || gasUrl || storedUrl).trim();
-
-    if (!targetUrl || !targetUrl.startsWith('https://script.google.com/')) {
-      setNeedsEndpointSetup(true);
-      setSubmissionError(
-        'One-time admin setup required on this domain: Paste your deployed Google Apps Script Web App URL (https://script.google.com/macros/s/.../exec) below to link your Google Sheet, or set VITE_GAS_WEB_APP_URL in Vercel Environment Variables.'
-      );
-      return;
-    }
-
-    if (overrideEndpointUrl) {
-      try {
-        localStorage.setItem('dte_itd_multistage_gas_url', targetUrl);
-      } catch {}
-      setNeedsEndpointSetup(false);
     }
 
     setIsSubmitting(true);
@@ -200,7 +177,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
       let sheetRowsAppended = allAllocations.length;
 
       try {
-        const response = await fetch(targetUrl, {
+        const response = await fetch(BACKEND_WEB_APP_URL, {
           method: 'POST',
           mode: 'cors',
           redirect: 'follow',
@@ -227,12 +204,10 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
           throw new Error(`HTTP ${response.status}`);
         }
       } catch (corsOrRedirectErr: any) {
-        // Fallback for strict browser CORS handling on Google Apps Script 302 redirects:
-        // Sending text/plain with mode: 'no-cors' still delivers the POST body to doPost(e) in Apps Script.
         if (corsOrRedirectErr.message && corsOrRedirectErr.message.includes('Server reported')) {
           throw corsOrRedirectErr;
         }
-        await fetch(targetUrl, {
+        await fetch(BACKEND_WEB_APP_URL, {
           method: 'POST',
           mode: 'no-cors',
           headers: {
@@ -536,36 +511,14 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
               </div>
             </div>
 
-            {/* Submission Error / One-time Admin Endpoint Setup Banner */}
+            {/* Submission Error Banner */}
             {submissionError && (
-              <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 space-y-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block">Submission Notice:</strong>
-                    <span>{submissionError}</span>
-                  </div>
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong className="block">Submission Error:</strong>
+                  <span>{submissionError}</span>
                 </div>
-
-                {needsEndpointSetup && (
-                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                    <input
-                      type="url"
-                      value={setupUrlInput}
-                      onChange={(e) => setSetupUrlInput(e.target.value)}
-                      placeholder="https://script.google.com/macros/s/.../exec"
-                      className="flex-1 px-3 py-2 bg-white border border-rose-300 rounded-lg text-stone-900 font-mono text-xs outline-none focus:border-stone-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDirectSubmit(setupUrlInput)}
-                      disabled={!setupUrlInput.trim().startsWith('https://script.google.com/')}
-                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white font-semibold rounded-lg text-xs whitespace-nowrap"
-                    >
-                      Save & Submit Now
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -582,7 +535,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
               <button
                 type="button"
-                onClick={() => handleDirectSubmit()}
+                onClick={handleDirectSubmit}
                 disabled={isSubmitting}
                 className="w-full sm:w-auto px-8 py-3 bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all shadow-sm flex items-center justify-center gap-2"
               >
