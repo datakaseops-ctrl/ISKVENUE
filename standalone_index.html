@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Institutional Competition Planning Portal - DTE & ITD</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-900 min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Institutional Header -->
+    <header class="bg-white border border-stone-200 shadow-sm rounded-xl p-6 sm:p-7 mb-6">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-4 mb-4">
+        <div>
+          <div class="text-xs font-semibold uppercase tracking-wider text-stone-500 mb-0.5">
+            DTE & ITD Technical Authorities • Form Ref: DTE-ITD/EXAM/63T
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900">
+            Institutional Competition Planning Portal
+          </h1>
+          <p class="text-xs text-stone-600 mt-1">
+            Directorate of Technical Education (DTE) & Industrial Training Department (ITD)
+          </p>
+        </div>
+      </div>
+
+      <!-- 2-Step Stepper Indicator -->
+      <div class="grid grid-cols-2 gap-3 text-xs">
+        <div id="stepTab1" class="p-3 rounded-lg border border-stone-900 bg-stone-900 text-white font-semibold">
+          <span class="block text-[10px] uppercase opacity-75">Step 1</span>
+          <span class="truncate block">1. Select Department & Trades</span>
+        </div>
+        <div id="stepTab2" class="p-3 rounded-lg border border-stone-200 bg-stone-50 text-stone-600">
+          <span class="block text-[10px] uppercase opacity-75">Step 2</span>
+          <span class="truncate block">2. District Exam Centers & Submit</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="bg-white border border-stone-200 shadow-sm rounded-xl p-6 sm:p-8">
+
+      <!-- ==========================================
+           STEP 1: DEPARTMENT & TRADE SELECTION
+           ========================================== -->
+      <div id="page1" class="space-y-6">
+        <div>
+          <label class="block text-sm font-bold text-stone-900 mb-1">
+            1. Select Department <span class="text-rose-600">*</span>
+          </label>
+          <p class="text-xs text-stone-500 mb-3">
+            Select the controlling administrative department to reveal sanctioned trades.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button 
+              type="button" 
+              onclick="selectDepartment('Directorate of Technical Education (DTE)')" 
+              id="btnDeptDTE"
+              class="p-4 rounded-xl border border-stone-300 text-left text-xs hover:border-stone-400 transition-all"
+            >
+              <strong class="block text-sm text-stone-900">Directorate of Technical Education (DTE)</strong>
+              <span class="text-stone-500 mt-1 block">Polytechnics, Engineering Colleges & Technical Institutes</span>
+            </button>
+            <button 
+              type="button" 
+              onclick="selectDepartment('Industrial Training Department (ITD)')" 
+              id="btnDeptITD"
+              class="p-4 rounded-xl border border-stone-300 text-left text-xs hover:border-stone-400 transition-all"
+            >
+              <strong class="block text-sm text-stone-900">Industrial Training Department (ITD)</strong>
+              <span class="text-stone-500 mt-1 block">Government & Private Industrial Training Institutes (ITIs)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 63 Trades (Appears when department selected) -->
+        <div id="tradesSection" class="hidden border-t border-stone-200 pt-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <label class="block text-sm font-bold text-stone-900">
+                2. Select Sanctioned Trade(s) <span class="text-rose-600">*</span>
+              </label>
+              <p class="text-xs text-stone-500">
+                Choose the competition skills to be conducted (63 Alphabetical Trades).
+              </p>
+            </div>
+            <span id="selectedCountBadge" class="text-xs font-semibold bg-stone-100 text-stone-800 px-2.5 py-1 rounded">
+              0 Selected
+            </span>
+          </div>
+
+          <div class="flex gap-2">
+            <input 
+              type="text" 
+              id="tradeSearch" 
+              oninput="filterTrades()" 
+              placeholder="Search 63 skills (e.g. Robotics, Welding, Cloud)..."
+              class="w-full px-3 py-2 text-xs border border-stone-300 rounded-lg outline-none"
+            />
+          </div>
+
+          <!-- Trades List Grid -->
+          <div id="tradesContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto p-2 border border-stone-200 rounded-lg">
+            <!-- Injected via JavaScript -->
+          </div>
+
+          <div class="flex justify-end pt-3">
+            <button 
+              type="button" 
+              onclick="goToPage(2)" 
+              id="btnNextToScreening" 
+              disabled
+              class="px-6 py-2.5 bg-stone-900 disabled:opacity-40 hover:bg-stone-800 text-white text-xs font-semibold rounded-lg transition-colors"
+            >
+              Proceed to District Online Exam Centers →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           STEP 2: DISTRICT EXAM CENTERS & DIRECT SUBMIT TO GOOGLE SHEET
+           ========================================== -->
+      <div id="page2" class="hidden space-y-6">
+        <div class="border-b border-stone-200 pb-4">
+          <h2 class="text-lg font-bold text-stone-900">District Online Exam Center Allotment</h2>
+          <p class="text-xs text-stone-600">Select district from dropdown to allot exam centers, computers available, and connectivity infrastructure.</p>
+        </div>
+
+        <div class="flex items-center gap-2 p-3 bg-stone-50 rounded-lg border border-stone-200 text-xs">
+          <span class="font-semibold text-stone-800">Select District:</span>
+          <select id="districtScreeningSelect" class="p-1.5 border border-stone-300 rounded bg-white font-medium text-xs">
+            <!-- Injected via JS -->
+          </select>
+          <button type="button" onclick="addScreeningVenueForSelectedDistrict()" class="px-3 py-1.5 bg-stone-900 text-white rounded text-xs font-medium">
+            + Allot Exam Venue in District
+          </button>
+        </div>
+
+        <div id="screeningVenuesContainer" class="space-y-4"></div>
+
+        <div id="submitAlert" class="hidden p-4 rounded-lg text-xs font-medium"></div>
+
+        <div class="flex justify-between border-t border-stone-200 pt-4">
+          <button type="button" onclick="goToPage(1)" class="px-4 py-2 border border-stone-300 rounded text-xs text-stone-700">
+            ← Back to Dept & Trades
+          </button>
+          <button 
+            type="button" 
+            id="btnFinalSubmit" 
+            onclick="submitExamCenters()" 
+            class="px-8 py-3 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-bold transition-all shadow"
+          >
+            Submit Exam Center Allocations
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <script>
+    // Backend Web App URL (hidden from end-users; paste deployed Google Apps Script /exec URL here)
+    const BACKEND_WEB_APP_URL = "";
+
+    const ALL_TRADES = [
+      "3D Digital Game Art", "Additive Manufacturing", "Aircraft Maintenance", "Autobody Repair",
+      "Automobile Technology", "Autonomous Mobile Robotics", "Bakery", "Beauty Therapy",
+      "Bricklaying", "Cabinetmaking", "Car Painting", "Carpentry", "Chemical Laboratory Technology",
+      "Cloud Computing", "CNC Milling", "CNC Turning", "Concrete Construction Work", "Cooking",
+      "Cyber Security", "Dental Prosthetics", "Digital Construction", "Digital Interactive Media",
+      "Electrical Installations", "Electronics", "Fashion Technology", "Floristry",
+      "Graphic Design Technology", "Hairdressing", "Health and Social Care", "Heavy Vehicle Technology",
+      "Hotel Reception", "ICT Network Infrastructure", "Industrial Control", "Industrial Design Technology",
+      "Industrial Mechanics", "Industry 4.0", "Intelligent Security Technology", "IT Network Systems Administration",
+      "Jewellery", "Joinery", "Landscape Gardening", "Logistics and Freight Forwarding",
+      "Mechanical Engineering CAD", "Mechatronics", "Mobile Applications Development", "Optoelectronic Technology",
+      "Painting and Decorating", "Patisserie and Confectionery", "Plastering and Drywall Systems",
+      "Plumbing and Heating", "Refrigeration and Air Conditioning", "Renewable Energy", "Restaurant Service",
+      "Retail Sales", "Robot Systems Integration", "Software Application Development", "Software Testing",
+      "Unmanned Aerial Systems", "Visual Merchandising", "Wall and Floor Tiling", "Water Technology",
+      "Web Technologies", "Welding"
+    ];
+
+    const DISTRICTS = ["Thiruvananthapuram", "Kollam", "Pathanamthitta", "Alappuzha", "Kottayam", "Idukki", "Ernakulam", "Thrissur", "Palakkad", "Malappuram", "Kozhikode", "Wayanad", "Kannur", "Kasaragod"];
+
+    let selectedDept = "";
+    let selectedTrades = [];
+    let screeningAllocations = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTradesGrid(ALL_TRADES);
+      const distSelect = document.getElementById('districtScreeningSelect');
+      distSelect.innerHTML = DISTRICTS.map(d => `<option value="${d}">${d}</option>`).join('');
+    });
+
+    function selectDepartment(dept) {
+      selectedDept = dept;
+      document.getElementById('btnDeptDTE').className = dept.includes('DTE') 
+        ? "p-4 rounded-xl border-2 border-stone-900 bg-stone-900 text-white text-left text-xs transition-all shadow-sm"
+        : "p-4 rounded-xl border border-stone-300 text-left text-xs text-stone-700 hover:border-stone-400";
+      document.getElementById('btnDeptITD').className = dept.includes('ITD') 
+        ? "p-4 rounded-xl border-2 border-stone-900 bg-stone-900 text-white text-left text-xs transition-all shadow-sm"
+        : "p-4 rounded-xl border border-stone-300 text-left text-xs text-stone-700 hover:border-stone-400";
+      document.getElementById('tradesSection').classList.remove('hidden');
+    }
+
+    function renderTradesGrid(tradesList) {
+      const container = document.getElementById('tradesContainer');
+      container.innerHTML = "";
+      tradesList.forEach((trade) => {
+        const isChecked = selectedTrades.includes(trade);
+        const div = document.createElement('div');
+        div.className = `p-2 rounded border cursor-pointer text-xs flex items-center justify-between ${isChecked ? 'bg-stone-900 text-white border-stone-900 font-medium' : 'bg-white text-stone-800 border-stone-200'}`;
+        div.onclick = () => toggleTrade(trade);
+        div.innerHTML = `<span>${trade}</span> <span>${isChecked ? '✓' : '+'}</span>`;
+        container.appendChild(div);
+      });
+    }
+
+    function toggleTrade(trade) {
+      if (selectedTrades.includes(trade)) {
+        selectedTrades = selectedTrades.filter(t => t !== trade);
+      } else {
+        selectedTrades.push(trade);
+      }
+      renderTradesGrid(ALL_TRADES);
+      document.getElementById('selectedCountBadge').innerText = `${selectedTrades.length} Selected`;
+      document.getElementById('btnNextToScreening').disabled = selectedTrades.length === 0;
+    }
+
+    function filterTrades() {
+      const q = document.getElementById('tradeSearch').value.toLowerCase();
+      renderTradesGrid(ALL_TRADES.filter(t => t.toLowerCase().includes(q)));
+    }
+
+    function goToPage(page) {
+      [1, 2].forEach(p => {
+        document.getElementById(`page${p}`).classList.add('hidden');
+        document.getElementById(`stepTab${p}`).className = p === page 
+          ? "p-3 rounded-lg border border-stone-900 bg-stone-900 text-white font-semibold"
+          : "p-3 rounded-lg border border-stone-200 bg-stone-50 text-stone-600";
+      });
+      document.getElementById(`page${page}`).classList.remove('hidden');
+
+      if (page === 2 && screeningAllocations.length === 0) {
+        addScreeningVenueForDistrict(DISTRICTS[0]);
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function addScreeningVenueForSelectedDistrict() {
+      const district = document.getElementById('districtScreeningSelect').value;
+      addScreeningVenueForDistrict(district);
+    }
+
+    function addScreeningVenueForDistrict(district) {
+      screeningAllocations.push({
+        id: `screening-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        stage: 'screening',
+        stageLabel: 'Screening Level (Online Exam)',
+        districtOrZone: district,
+        skills: [...selectedTrades],
+        venue: "",
+        computers: "",
+        connectivity: "",
+        officer: "",
+        phone: "",
+        email: "",
+        amount: ""
+      });
+      renderScreeningCards();
+    }
+
+    function renderScreeningCards() {
+      const container = document.getElementById('screeningVenuesContainer');
+      container.innerHTML = "";
+      screeningAllocations.forEach((alloc, i) => {
+        const card = document.createElement('div');
+        card.className = "p-4 sm:p-5 rounded-xl border border-stone-200 bg-stone-50/50 space-y-3 text-xs";
+        card.innerHTML = `
+          <div class="flex justify-between items-center border-b border-stone-200 pb-2">
+            <div>
+              <span class="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-900 font-bold rounded">District: ${alloc.districtOrZone}</span>
+              <strong class="ml-2">${alloc.venue || 'Online Exam Center (Venue TBD)'}</strong>
+            </div>
+            ${screeningAllocations.length > 1 ? `<button type="button" onclick="removeScreening(${i})" class="text-rose-600">Remove</button>` : ''}
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold mb-1">District *</label>
+              <select class="w-full p-2 border border-stone-300 rounded bg-white" onchange="screeningAllocations[${i}].districtOrZone = this.value; renderScreeningCards();">
+                ${DISTRICTS.map(d => `<option value="${d}" ${d === alloc.districtOrZone ? 'selected' : ''}>${d}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Host Venue / Institution Name *</label>
+              <input type="text" class="w-full p-2 border border-stone-300 rounded bg-white" value="${alloc.venue}" placeholder="e.g. Govt Engineering College, CS Block" oninput="screeningAllocations[${i}].venue = this.value;" />
+            </div>
+            <div class="bg-indigo-50 p-2.5 rounded border border-indigo-100">
+              <label class="block font-semibold mb-1 text-indigo-950">No. of Computers Available *</label>
+              <input type="number" min="1" class="w-full p-2 border border-indigo-200 rounded bg-white font-mono" value="${alloc.computers}" placeholder="Enter number of working PCs" oninput="screeningAllocations[${i}].computers = this.value;" />
+            </div>
+            <div class="bg-amber-50 p-2.5 rounded border border-amber-100">
+              <label class="block font-semibold mb-1 text-amber-950">Connectivity & Power Backup Details *</label>
+              <input type="text" class="w-full p-2 border border-amber-200 rounded bg-white" value="${alloc.connectivity}" placeholder="Enter bandwidth, LAN & UPS/Generator details" oninput="screeningAllocations[${i}].connectivity = this.value;" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Exam Superintendent / Officer Name *</label>
+              <input type="text" class="w-full p-2 border border-stone-300 rounded bg-white" value="${alloc.officer}" placeholder="e.g. Prof. Anand V., Chief Superintendent" oninput="screeningAllocations[${i}].officer = this.value;" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Contact Mobile (10 digits) *</label>
+              <input type="tel" maxlength="10" class="w-full p-2 border border-stone-300 rounded bg-white font-mono" value="${alloc.phone}" placeholder="9876543210" oninput="screeningAllocations[${i}].phone = this.value;" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Official Email *</label>
+              <input type="email" class="w-full p-2 border border-stone-300 rounded bg-white" value="${alloc.email}" placeholder="exam@gec.gov.in" oninput="screeningAllocations[${i}].email = this.value;" />
+            </div>
+            <div>
+              <label class="block font-semibold mb-1">Estimated Exam Center Budget (INR) *</label>
+              <input type="number" min="0" class="w-full p-2 border border-stone-300 rounded bg-white font-mono" value="${alloc.amount}" placeholder="75000" oninput="screeningAllocations[${i}].amount = this.value;" />
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function removeScreening(i) {
+      screeningAllocations.splice(i, 1);
+      renderScreeningCards();
+    }
+
+    async function submitExamCenters() {
+      const alertBox = document.getElementById('submitAlert');
+      for (const a of screeningAllocations) {
+        if (!a.venue || !a.computers || !a.connectivity || !a.officer || !a.phone || !a.email || !a.amount) {
+          alertBox.className = "p-4 rounded-lg text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200 block";
+          alertBox.innerText = "Please complete all venue, computer count, connectivity, officer, phone, email, and cost fields.";
+          return;
+        }
+      }
+
+      const payload = {
+        department: selectedDept,
+        selectedTrades: selectedTrades,
+        allocations: screeningAllocations.map(a => ({
+          stage: a.stage,
+          stageLabel: a.stageLabel,
+          skills: a.skills,
+          districtOrZoneName: a.districtOrZone || "-",
+          numberOfComputers: a.computers || "-",
+          connectivityDetails: a.connectivity || "-",
+          venueName: a.venue,
+          coordinatingOfficer: a.officer,
+          contactPhone: a.phone,
+          email: a.email,
+          estimatedAmount: Number(a.amount)
+        }))
+      };
+
+      const btn = document.getElementById('btnFinalSubmit');
+      btn.disabled = true;
+      btn.innerText = "Submitting Allocations...";
+
+      try {
+        if (BACKEND_WEB_APP_URL) {
+          const res = await fetch(BACKEND_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+          const result = await res.json();
+          alertBox.className = "p-4 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 block";
+          alertBox.innerText = `Success! All ${result.rowsAppended || screeningAllocations.length} district exam center allocation(s) have been officially recorded.`;
+        } else {
+          await new Promise(r => setTimeout(r, 500));
+          alertBox.className = "p-4 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200 block";
+          alertBox.innerText = `Success! All ${screeningAllocations.length} district exam center allocation(s) have been officially recorded.`;
+        }
+      } catch (err) {
+        alertBox.className = "p-4 rounded-lg text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200 block";
+        alertBox.innerText = `Submission Error: ${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Submit Exam Center Allocations";
+      }
+    }
+  </script>
+</body>
+</html>

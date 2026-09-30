@@ -1,0 +1,6 @@
+{
+  "name": "Institutional Competition Planning Portal (DTE & ITD)",
+  "description": "Institutional planning and competition proposal management portal for DTE & ITD skill competitions, featuring question paper logistics, 63 unified trade selections, cost estimation, and Google Sheets integration via Google Apps Script.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
