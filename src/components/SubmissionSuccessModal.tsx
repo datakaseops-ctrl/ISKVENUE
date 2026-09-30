@@ -102,9 +102,10 @@ Status: Officially Recorded (${record.allocations.length} venue allocation rows)
               {record.allocations.map((alloc, idx) => (
                 <div key={idx} className="p-3 flex items-start justify-between gap-3 hover:bg-stone-50">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-stone-900">
                         District: {alloc.districtOrZoneName || '-'}
+                        {alloc.talukName ? ` • Taluk: ${alloc.talukName}` : ''}
                       </span>
                       <span className="text-indigo-700 font-mono-num font-semibold">
                         ({alloc.numberOfComputers || 0} PCs)

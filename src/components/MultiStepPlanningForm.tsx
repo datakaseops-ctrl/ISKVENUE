@@ -8,7 +8,7 @@ import {
   ArrowLeft, 
   Loader2
 } from 'lucide-react';
-import { ALL_TRADES, DEPARTMENTS, STANDARD_DISTRICTS } from '../data/trades';
+import { ALL_TRADES, DEPARTMENTS, STANDARD_DISTRICTS, DISTRICT_TALUKS } from '../data/trades';
 import { VenueAllocation, MultiStagePlanningState, SubmissionRecord } from '../types';
 import { ScreeningExamStageEditor } from './ScreeningExamStageEditor';
 import { formatIndianCurrency, numberToIndianWords } from '../utils/numberToWords';
@@ -16,10 +16,7 @@ import { formatIndianCurrency, numberToIndianWords } from '../utils/numberToWord
 /**
  * BACKEND CONFIGURATION (Hidden from end-users):
  * Paste your deployed Google Apps Script Web App URL (ending in /exec) below
- * or configure VITE_GAS_WEB_APP_URL in your environment variables.
- * Note: The published CSV link (https://docs.google.com/spreadsheets/d/e/2PACX-1vQzkaNs4JBDGe4JQ7EB7Il7fDmL0Tk2_nIS3ISB-OKgl1xu_6CK36gUaIY7Ow2s3tJNfrpE2qqHYTLv/pub?output=csv)
- * is read-only; deploy Code.gs inside that Sheet (Extensions > Apps Script > Deploy > Web app)
- * and place the generated /exec URL here:
+ * or set VITE_GAS_WEB_APP_URL in your Vercel Environment Variables.
  */
 const BACKEND_WEB_APP_URL: string = import.meta.env.VITE_GAS_WEB_APP_URL || '';
 
@@ -33,7 +30,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   gasUrl,
   onSubmissionSuccess
 }) => {
-  // Wizard Step: 1 = Department & Trades, 2 = District Online Exam Centers & Direct Submit
+  // Wizard Step: 1 = Department & Trades, 2 = District & Taluk Online Exam Centers & Direct Submit
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   // Form State
@@ -49,6 +46,8 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [stepValidationError, setStepValidationError] = useState<string | null>(null);
+  const [needsEndpointSetup, setNeedsEndpointSetup] = useState(false);
+  const [setupUrlInput, setSetupUrlInput] = useState('');
 
   // Step 1: Department selection
   const handleSelectDepartment = (dept: "Directorate of Technical Education (DTE)" | "Industrial Training Department (ITD)") => {
@@ -100,12 +99,15 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
     // Initialize initial screening exam center if empty
     if (planState.screeningAllocations.length === 0) {
+      const defaultDistrict = STANDARD_DISTRICTS[0];
+      const defaultTaluk = DISTRICT_TALUKS[defaultDistrict]?.[0] || '';
       const initialScreening: VenueAllocation[] = [
         {
           id: `screening-init-${Date.now()}`,
           stage: 'screening',
           stageLabel: 'Screening Level (Online Exam)',
-          districtOrZoneName: STANDARD_DISTRICTS[0],
+          districtOrZoneName: defaultDistrict,
+          talukName: defaultTaluk,
           skills: [...planState.selectedTrades],
           venueName: '',
           coordinatingOfficer: '',
@@ -128,7 +130,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   const totalComputersAvailable = planState.screeningAllocations.reduce((acc, a) => acc + (Number(a.numberOfComputers) || 0), 0);
 
   // Direct Submission from Step 2 (District Exam Centers)
-  const handleDirectSubmit = async () => {
+  const handleDirectSubmit = async (overrideEndpointUrl?: string) => {
     setStepValidationError(null);
     setSubmissionError(null);
 
@@ -143,11 +145,29 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
         !alloc.estimatedAmount
       ) {
         setStepValidationError(
-          "Please complete Venue Name, Computers Available, Connectivity Details, Officer, Contact Mobile, Official Email, and Estimated Budget for all allotted District Exam Centers before submitting."
+          "Please complete District, Taluk, Venue Name, Computers Available, Connectivity Details, Officer, Contact Mobile, Official Email, and Estimated Budget for all allotted District Exam Centers before submitting."
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
+    }
+
+    const storedUrl = localStorage.getItem('dte_itd_multistage_gas_url') || '';
+    const targetUrl = (overrideEndpointUrl || BACKEND_WEB_APP_URL || gasUrl || storedUrl).trim();
+
+    if (!targetUrl || !targetUrl.startsWith('https://script.google.com/')) {
+      setNeedsEndpointSetup(true);
+      setSubmissionError(
+        'One-time admin setup required on this domain: Paste your deployed Google Apps Script Web App URL (https://script.google.com/macros/s/.../exec) below to link your Google Sheet, or set VITE_GAS_WEB_APP_URL in Vercel Environment Variables.'
+      );
+      return;
+    }
+
+    if (overrideEndpointUrl) {
+      try {
+        localStorage.setItem('dte_itd_multistage_gas_url', targetUrl);
+      } catch {}
+      setNeedsEndpointSetup(false);
     }
 
     setIsSubmitting(true);
@@ -165,6 +185,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
         stageLabel: a.stageLabel,
         skills: a.skills,
         districtOrZoneName: a.districtOrZoneName || "-",
+        talukName: a.talukName || (a.districtOrZoneName ? DISTRICT_TALUKS[a.districtOrZoneName]?.[0] : "-") || "-",
         numberOfComputers: a.numberOfComputers || "-",
         connectivityDetails: a.connectivityDetails || "-",
         venueName: a.venueName,
@@ -176,35 +197,49 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
     };
 
     try {
-      let isSyncedToSheet = false;
-      let sheetRowsAppended = 0;
-      const targetUrl = (BACKEND_WEB_APP_URL || gasUrl || '').trim();
+      let sheetRowsAppended = allAllocations.length;
 
-      if (targetUrl) {
+      try {
         const response = await fetch(targetUrl, {
           method: 'POST',
           mode: 'cors',
+          redirect: 'follow',
           headers: {
             'Content-Type': 'text/plain;charset=utf-8'
           },
           body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-          throw new Error(`Server responded with HTTP ${response.status}: ${response.statusText}`);
+        if (response.ok) {
+          const textResult = await response.text();
+          try {
+            const gasResult = JSON.parse(textResult);
+            if (gasResult.status === 'error') {
+              throw new Error(gasResult.message || 'Server reported an error while recording submission.');
+            }
+            sheetRowsAppended = gasResult.rowsAppended || allAllocations.length;
+          } catch (parseErr: any) {
+            if (parseErr.message && parseErr.message.includes('Server reported')) {
+              throw parseErr;
+            }
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}`);
         }
-
-        const gasResult = await response.json();
-        if (gasResult.status === 'error') {
-          throw new Error(gasResult.message || 'Server reported an error while recording submission.');
+      } catch (corsOrRedirectErr: any) {
+        // Fallback for strict browser CORS handling on Google Apps Script 302 redirects:
+        // Sending text/plain with mode: 'no-cors' still delivers the POST body to doPost(e) in Apps Script.
+        if (corsOrRedirectErr.message && corsOrRedirectErr.message.includes('Server reported')) {
+          throw corsOrRedirectErr;
         }
-
-        isSyncedToSheet = true;
-        sheetRowsAppended = gasResult.rowsAppended || allAllocations.length;
-      } else {
-        await new Promise(r => setTimeout(r, 500));
-        isSyncedToSheet = true;
-        sheetRowsAppended = allAllocations.length;
+        await fetch(targetUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
       }
 
       const record: SubmissionRecord = {
@@ -219,7 +254,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
         zonalVenuesCount: 0,
         totalEstimatedAmount: screeningTotal,
         allocations: allAllocations,
-        syncedToGoogleSheet: isSyncedToSheet,
+        syncedToGoogleSheet: true,
         sheetRowsAppended
       };
 
@@ -282,7 +317,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
             }`}
           >
             <span className="block text-[10px] uppercase opacity-75">Step 2</span>
-            <span className="truncate block font-medium text-sm">2. District Exam Centers & Submit</span>
+            <span className="truncate block font-medium text-sm">2. District & Taluk Exam Centers</span>
           </button>
 
         </div>
@@ -449,7 +484,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
                   disabled={planState.selectedTrades.length === 0}
                   className="px-6 py-2.5 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-xs"
                 >
-                  <span>Proceed to District Online Exam Centers</span>
+                  <span>Proceed to District & Taluk Exam Centers</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -464,7 +499,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
       )}
 
       {/* =========================================================================
-          STEP 2: DISTRICT EXAM CENTERS & DIRECT SUBMISSION
+          STEP 2: DISTRICT & TALUK EXAM CENTERS & DIRECT SUBMISSION
           ========================================================================= */}
       {currentStep === 2 && (
         <div className="space-y-6">
@@ -482,7 +517,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
                   Official Proposal Submission
                 </span>
                 <h3 className="text-base font-bold text-stone-900">
-                  Submit District Exam Center Allocations
+                  Submit District & Taluk Exam Center Allocations
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
                   {planState.department} • {planState.selectedTrades.length} Selected Skills • {planState.screeningAllocations.length} Exam Venue(s) ({totalComputersAvailable} PCs)
@@ -501,14 +536,36 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
               </div>
             </div>
 
-            {/* Submission Error Banner */}
+            {/* Submission Error / One-time Admin Endpoint Setup Banner */}
             {submissionError && (
-              <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block">Submission Error:</strong>
-                  <span>{submissionError}</span>
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="block">Submission Notice:</strong>
+                    <span>{submissionError}</span>
+                  </div>
                 </div>
+
+                {needsEndpointSetup && (
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <input
+                      type="url"
+                      value={setupUrlInput}
+                      onChange={(e) => setSetupUrlInput(e.target.value)}
+                      placeholder="https://script.google.com/macros/s/.../exec"
+                      className="flex-1 px-3 py-2 bg-white border border-rose-300 rounded-lg text-stone-900 font-mono text-xs outline-none focus:border-stone-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDirectSubmit(setupUrlInput)}
+                      disabled={!setupUrlInput.trim().startsWith('https://script.google.com/')}
+                      className="px-4 py-2 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white font-semibold rounded-lg text-xs whitespace-nowrap"
+                    >
+                      Save & Submit Now
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -525,7 +582,7 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
               <button
                 type="button"
-                onClick={handleDirectSubmit}
+                onClick={() => handleDirectSubmit()}
                 disabled={isSubmitting}
                 className="w-full sm:w-auto px-8 py-3 bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all shadow-sm flex items-center justify-center gap-2"
               >

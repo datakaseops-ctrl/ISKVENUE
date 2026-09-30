@@ -3,6 +3,7 @@ export interface VenueAllocation {
   stage: 'screening' | 'district' | 'zonal';
   stageLabel: string;
   districtOrZoneName?: string;
+  talukName?: string;
   skills: string[]; // 1 or more pooled skills
   questionPaper?: string;
   venueName: string;

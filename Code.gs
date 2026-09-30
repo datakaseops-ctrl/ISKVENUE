@@ -1,24 +1,19 @@
 /**
  * Google Apps Script (Code.gs) Backend
- * DTE & ITD Institutional Competition Planning Portal (District Online Exam Centers)
- *
- * Associated Published Sheet CSV:
- * https://docs.google.com/spreadsheets/d/e/2PACX-1vQzkaNs4JBDGe4JQ7EB7Il7fDmL0Tk2_nIS3ISB-OKgl1xu_6CK36gUaIY7Ow2s3tJNfrpE2qqHYTLv/pub?output=csv
+ * DTE & ITD Institutional Competition Planning Portal (District & Taluk Online Exam Centers)
  *
  * HOW TO DEPLOY THIS SCRIPT IN YOUR GOOGLE SHEET:
- * 1. Open the editable Google Sheet corresponding to your link above.
- * 2. In the top menu, click Extensions > Apps Script.
- * 3. Delete any existing code in Code.gs and paste this entire script.
- * 4. Click Save (disk icon), then click Deploy > New deployment.
- * 5. Select type: "Web app".
+ * 1. Open your editable Google Sheet in Google Drive.
+ * 2. Click Extensions > Apps Script.
+ * 3. Replace all code in Code.gs with this script and click Save.
+ * 4. Click Deploy > New deployment > Select type: "Web app".
  *    - Execute as: "Me"
  *    - Who has access: "Anyone"
- * 6. Click Deploy, authorize access, and copy the generated Web App URL (ending in /exec).
- * 7. Paste that /exec URL into `BACKEND_WEB_APP_URL` in `src/components/MultiStepPlanningForm.tsx`
- *    (or `VITE_GAS_WEB_APP_URL` in your `.env`). End-users will never see the URL or database.
+ * 5. Copy the Web App URL (ending in /exec) and set it as VITE_GAS_WEB_APP_URL in Vercel
+ *    (or paste it into BACKEND_WEB_APP_URL in src/components/MultiStepPlanningForm.tsx).
  *
- * Target Sheet Columns (12 Columns):
- * [Submission ID, Timestamp, Department, Competition Stage, District, Venue/Institution, Computers Available, Connectivity Details, Skill(s) Catered, Coordinating Officer, Contact Phone, Email, Estimated Amount]
+ * Target Sheet Columns (14 Columns):
+ * [Submission ID, Timestamp, Department, Competition Stage, District, Taluk, Venue / Institution Name, Computers Available, Connectivity & Power Backup Details, Skill(s) Catered, Coordinating Officer, Contact Phone, Official Email, Estimated Amount (INR)]
  */
 
 function doPost(e) {
@@ -43,6 +38,7 @@ function doPost(e) {
     } else if (e && e.parameter) {
       data = e.parameter;
     } else {
+      lock.releaseLock();
       return createJsonResponse({
         status: "error",
         message: "No data payload received in request."
@@ -60,6 +56,7 @@ function doPost(e) {
         "Department",
         "Competition Stage",
         "District",
+        "Taluk",
         "Venue / Institution Name",
         "Computers Available",
         "Connectivity & Power Backup Details",
@@ -96,6 +93,7 @@ function doPost(e) {
           : (alloc.skills || (Array.isArray(data.selectedTrades) ? data.selectedTrades.join(", ") : ""));
         var stageName = alloc.stageLabel || "Screening Level (Online Exam)";
         var district = alloc.districtOrZoneName || alloc.district || "-";
+        var taluk = alloc.talukName || alloc.taluk || "-";
         var venue = alloc.venueName || alloc.venue || "";
         var computers = Number(alloc.numberOfComputers) || alloc.numberOfComputers || 0;
         var connectivity = alloc.connectivityDetails || "-";
@@ -110,6 +108,7 @@ function doPost(e) {
           department,
           stageName,
           district,
+          taluk,
           venue,
           computers,
           connectivity,
@@ -133,7 +132,7 @@ function doPost(e) {
     for (var r = 0; r < rowsToAppend.length; r++) {
       sheet.appendRow(rowsToAppend[r]);
       var currLastRow = sheet.getLastRow();
-      sheet.getRange(currLastRow, 13).setNumberFormat("#,##0.00");
+      sheet.getRange(currLastRow, 14).setNumberFormat("#,##0.00");
     }
 
     lock.releaseLock();

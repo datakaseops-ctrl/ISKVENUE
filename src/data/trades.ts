@@ -140,3 +140,118 @@ export const STANDARD_DISTRICTS = [
   "Kasaragod",
   "Central District / Metro Division"
 ] as const;
+
+export const DISTRICT_TALUKS: Record<string, string[]> = {
+  "Thiruvananthapuram": [
+    "Thiruvananthapuram",
+    "Neyyattinkara",
+    "Kattakada",
+    "Nedumangad",
+    "Chirayinkeezhu",
+    "Varkala"
+  ],
+  "Kollam": [
+    "Kollam",
+    "Kunnathur",
+    "Karunagappally",
+    "Kottarakkara",
+    "Punalur",
+    "Pathanapuram"
+  ],
+  "Pathanamthitta": [
+    "Kozhencherry",
+    "Adoor",
+    "Konni",
+    "Ranni",
+    "Mallappally",
+    "Thiruvalla"
+  ],
+  "Alappuzha": [
+    "Ambalappuzha",
+    "Cherthala",
+    "Kuttanad",
+    "Karthikappally",
+    "Chengannur",
+    "Mavelikkara"
+  ],
+  "Kottayam": [
+    "Kottayam",
+    "Changanassery",
+    "Vaikom",
+    "Meenachil",
+    "Kanjirappally"
+  ],
+  "Idukki": [
+    "Idukki",
+    "Thodupuzha",
+    "Devikulam",
+    "Peerumade",
+    "Udumbanchola"
+  ],
+  "Ernakulam": [
+    "Kanayannur",
+    "Kochi",
+    "Aluva",
+    "Kunnathunad",
+    "Muvattupuzha",
+    "Kothamangalam",
+    "Paravur"
+  ],
+  "Thrissur": [
+    "Thrissur",
+    "Mukundapuram",
+    "Chalakudy",
+    "Kodungallur",
+    "Chavakkad",
+    "Kunnamkulam",
+    "Thalappilly"
+  ],
+  "Palakkad": [
+    "Palakkad",
+    "Alathur",
+    "Chittur",
+    "Mannarkkad",
+    "Ottappalam",
+    "Pattambi",
+    "Attappady"
+  ],
+  "Malappuram": [
+    "Ernad",
+    "Kondotty",
+    "Nilambur",
+    "Perinthalmanna",
+    "Ponnani",
+    "Tirur",
+    "Tirurangadi"
+  ],
+  "Kozhikode": [
+    "Kozhikode",
+    "Koyilandy",
+    "Thamarassery",
+    "Vatakara"
+  ],
+  "Wayanad": [
+    "Vythiri",
+    "Mananthavady",
+    "Sulthan Bathery"
+  ],
+  "Kannur": [
+    "Kannur",
+    "Thalassery",
+    "Iritty",
+    "Taliparamba",
+    "Payyanur"
+  ],
+  "Kasaragod": [
+    "Kasaragod",
+    "Hosdurg",
+    "Vellarikundu",
+    "Manjeshwaram"
+  ],
+  "Central District / Metro Division": [
+    "Central Metro Taluk",
+    "North Metro Taluk",
+    "South Metro Taluk"
+  ]
+};
+
