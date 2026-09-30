@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { 
   Send, 
   AlertCircle, 
-  Check, 
-  Search, 
   ArrowRight, 
   ArrowLeft, 
   Loader2
 } from 'lucide-react';
-import { ALL_TRADES, DEPARTMENTS, STANDARD_DISTRICTS, DISTRICT_TALUKS } from '../data/trades';
+import { DEPARTMENTS, STANDARD_DISTRICTS, DISTRICT_TALUKS } from '../data/trades';
 import { VenueAllocation, MultiStagePlanningState, SubmissionRecord } from '../types';
 import { ScreeningExamStageEditor } from './ScreeningExamStageEditor';
 import { formatIndianCurrency, numberToIndianWords } from '../utils/numberToWords';
@@ -27,7 +25,7 @@ interface MultiStepPlanningFormProps {
 export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
   onSubmissionSuccess
 }) => {
-  // Wizard Step: 1 = Department & Trades, 2 = District & Taluk Online Exam Centers & Direct Submit
+  // Wizard Step: 1 = Select Department, 2 = District & Taluk Online Exam Centers & Direct Submit
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
 
   // Form State
@@ -39,82 +37,47 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
     zonalAllocations: []
   });
 
-  const [tradeSearch, setTradeSearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [stepValidationError, setStepValidationError] = useState<string | null>(null);
 
-  // Step 1: Department selection
-  const handleSelectDepartment = (dept: "Directorate of Technical Education (DTE)" | "Industrial Training Department (ITD)") => {
+  // Helper to initialize initial screening exam center if empty and go to Step 2
+  const proceedToExamCentersWithDept = (
+    dept: "Directorate of Technical Education (DTE)" | "Industrial Training Department (ITD)"
+  ) => {
     setStepValidationError(null);
-    setPlanState(prev => ({
-      ...prev,
-      department: dept
-    }));
-  };
 
-  // Step 1: Trade toggling
-  const handleToggleTrade = (trade: string) => {
-    setStepValidationError(null);
+    const defaultDistrict = STANDARD_DISTRICTS[0];
+    const defaultTaluk = DISTRICT_TALUKS[defaultDistrict]?.[0] || '';
+
     setPlanState(prev => {
-      const exists = prev.selectedTrades.includes(trade);
-      const updated = exists 
-        ? prev.selectedTrades.filter(t => t !== trade)
-        : [...prev.selectedTrades, trade];
-      return { ...prev, selectedTrades: updated };
+      const allocations =
+        prev.screeningAllocations.length > 0
+          ? prev.screeningAllocations
+          : [
+              {
+                id: `screening-init-${Date.now()}`,
+                stage: 'screening' as const,
+                stageLabel: 'Screening Level (Online Exam)',
+                districtOrZoneName: defaultDistrict,
+                talukName: defaultTaluk,
+                skills: [],
+                venueName: '',
+                coordinatingOfficer: '',
+                contactPhone: '',
+                email: '',
+                estimatedAmount: '' as const,
+                numberOfComputers: '' as const,
+                connectivityDetails: ''
+              }
+            ];
+
+      return {
+        ...prev,
+        department: dept,
+        screeningAllocations: allocations
+      };
     });
-  };
-
-  const handleSelectAllTrades = () => {
-    setStepValidationError(null);
-    setPlanState(prev => ({
-      ...prev,
-      selectedTrades: [...ALL_TRADES]
-    }));
-  };
-
-  const handleClearSelectedTrades = () => {
-    setPlanState(prev => ({
-      ...prev,
-      selectedTrades: []
-    }));
-  };
-
-  // Helper to validate and proceed from Step 1 to Step 2 (District Exam Centers)
-  const handleProceedToScreening = () => {
-    if (!planState.department) {
-      setStepValidationError("Please select the Department (DTE or ITD) first.");
-      return;
-    }
-    if (planState.selectedTrades.length === 0) {
-      setStepValidationError("Please select at least one trade/skill to plan.");
-      return;
-    }
-    setStepValidationError(null);
-
-    // Initialize initial screening exam center if empty
-    if (planState.screeningAllocations.length === 0) {
-      const defaultDistrict = STANDARD_DISTRICTS[0];
-      const defaultTaluk = DISTRICT_TALUKS[defaultDistrict]?.[0] || '';
-      const initialScreening: VenueAllocation[] = [
-        {
-          id: `screening-init-${Date.now()}`,
-          stage: 'screening',
-          stageLabel: 'Screening Level (Online Exam)',
-          districtOrZoneName: defaultDistrict,
-          talukName: defaultTaluk,
-          skills: [...planState.selectedTrades],
-          venueName: '',
-          coordinatingOfficer: '',
-          contactPhone: '',
-          email: '',
-          estimatedAmount: '',
-          numberOfComputers: '',
-          connectivityDetails: ''
-        }
-      ];
-      setPlanState(prev => ({ ...prev, screeningAllocations: initialScreening }));
-    }
 
     setCurrentStep(2);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -154,9 +117,10 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
     const payload = {
       submissionId,
+      moduleType: 'exam_centres',
       timestamp: new Date().toISOString(),
       department: planState.department,
-      selectedTrades: planState.selectedTrades,
+      selectedTrades: [],
       allocations: allAllocations.map(a => ({
         stage: a.stage,
         stageLabel: a.stageLabel,
@@ -219,10 +183,11 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
       const record: SubmissionRecord = {
         id: submissionId,
+        moduleType: 'exam_centres',
         timestamp: new Date().toISOString(),
         department: planState.department,
-        selectedTradesCount: planState.selectedTrades.length,
-        selectedTrades: planState.selectedTrades,
+        selectedTradesCount: 0,
+        selectedTrades: [],
         screeningVenuesCount: planState.screeningAllocations.length,
         totalComputersAvailable,
         districtVenuesCount: 0,
@@ -253,15 +218,11 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
     }
   };
 
-  const visibleTrades = ALL_TRADES.filter(t => 
-    t.toLowerCase().includes(tradeSearch.toLowerCase())
-  );
-
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
       
       {/* 2-Step Stepper Navigation */}
-      <div className="bg-white border border-stone-200 rounded-xl p-4 shadow-xs">
+      <div className="bg-white border border-[#0e5774]/20 rounded-xl p-4 shadow-xs">
         <div className="grid grid-cols-2 gap-3 text-xs">
           
           <button
@@ -269,26 +230,26 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
             onClick={() => { setStepValidationError(null); setCurrentStep(1); }}
             className={`p-3 rounded-lg border text-left transition-colors ${
               currentStep === 1 
-                ? 'border-stone-900 bg-stone-900 text-white font-semibold' 
-                : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100'
+                ? 'border-[#0e5774] bg-[#0e5774] text-white font-semibold' 
+                : 'border-[#0e5774]/20 bg-[#f4f8fa] text-[#0e5774] hover:bg-[#0e5774]/10'
             }`}
           >
             <span className="block text-[10px] uppercase opacity-75">Step 1</span>
-            <span className="truncate block font-medium text-sm">1. Select Department & Trades</span>
+            <span className="truncate block font-medium text-sm">1. Select Department</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              if (planState.department && planState.selectedTrades.length > 0) {
-                handleProceedToScreening();
+              if (planState.department) {
+                proceedToExamCentersWithDept(planState.department);
               }
             }}
-            disabled={!planState.department || planState.selectedTrades.length === 0}
+            disabled={!planState.department}
             className={`p-3 rounded-lg border text-left transition-colors disabled:opacity-40 ${
               currentStep === 2 
-                ? 'border-stone-900 bg-stone-900 text-white font-semibold' 
-                : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100'
+                ? 'border-[#0e5774] bg-[#0e5774] text-white font-semibold' 
+                : 'border-[#0e5774]/20 bg-[#f4f8fa] text-[#0e5774] hover:bg-[#0e5774]/10'
             }`}
           >
             <span className="block text-[10px] uppercase opacity-75">Step 2</span>
@@ -316,23 +277,21 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
       )}
 
       {/* =========================================================================
-          STEP 1: SELECT DEPARTMENT, THEN SELECT TRADES
+          STEP 1: SELECT DEPARTMENT -> IMMEDIATELY PROCEEDS TO DISTRICT & TALUK EXAM CENTERS
           ========================================================================= */}
       {currentStep === 1 && (
         <div className="space-y-6">
-          
-          {/* Step 1.1: Department Selection */}
-          <section className="bg-white border border-stone-200 rounded-xl p-6 sm:p-7 shadow-xs">
+          <section className="bg-white border border-[#0e5774]/20 rounded-xl p-6 sm:p-7 shadow-xs">
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-6 h-6 rounded-md bg-stone-900 text-white text-xs font-mono font-bold flex items-center justify-center">
+              <span className="w-6 h-6 rounded-md bg-[#0e5774] text-white text-xs font-mono font-bold flex items-center justify-center">
                 1
               </span>
-              <h2 className="text-base font-semibold text-stone-900">
+              <h2 className="text-base font-semibold text-[#0e5774]">
                 Select Department <span className="text-rose-600">*</span>
               </h2>
             </div>
-            <p className="text-xs text-stone-500 mb-4">
-              Select the controlling administrative department to begin competition trade requisition.
+            <p className="text-xs text-slate-600 mb-5">
+              Select the controlling administrative department to proceed directly to District & Taluk Online Exam Center allotment.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -342,134 +301,36 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
                   <button
                     key={dept.id}
                     type="button"
-                    onClick={() => handleSelectDepartment(dept.name as any)}
-                    className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 ${
+                    onClick={() => proceedToExamCentersWithDept(dept.name as any)}
+                    className={`p-5 rounded-xl border text-left transition-all flex items-start justify-between gap-3.5 group ${
                       isSelected 
-                        ? 'border-stone-900 bg-stone-900 text-white shadow-xs' 
-                        : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-900'
+                        ? 'border-[#0e5774] bg-[#0e5774] text-white shadow-xs' 
+                        : 'border-[#0e5774]/25 bg-white hover:bg-[#f4f8fa] hover:border-[#0e5774] text-slate-900'
                     }`}
                   >
-                    <div className={`w-4 h-4 rounded-full mt-0.5 border flex items-center justify-center shrink-0 ${
-                      isSelected ? 'border-white bg-white' : 'border-stone-400 bg-white'
-                    }`}>
-                      {isSelected && <span className="w-2 h-2 rounded-full bg-stone-900" />}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">
-                        {dept.name}
+                    <div className="flex items-start gap-3.5">
+                      <div className={`w-4 h-4 rounded-full mt-0.5 border flex items-center justify-center shrink-0 ${
+                        isSelected ? 'border-white bg-white' : 'border-[#0e5774] bg-white'
+                      }`}>
+                        {isSelected && <span className="w-2 h-2 rounded-full bg-[#0e5774]" />}
                       </div>
-                      <div className={`text-xs mt-1 leading-relaxed ${isSelected ? 'text-stone-300' : 'text-stone-500'}`}>
-                        {dept.scope}
+                      <div>
+                        <div className="font-semibold text-sm">
+                          {dept.name}
+                        </div>
+                        <div className={`text-xs mt-1 leading-relaxed ${isSelected ? 'text-white/85' : 'text-slate-500'}`}>
+                          {dept.scope}
+                        </div>
                       </div>
                     </div>
+                    <ArrowRight className={`w-4 h-4 shrink-0 mt-0.5 transition-transform group-hover:translate-x-0.5 ${
+                      isSelected ? 'text-white' : 'text-[#0e5774]'
+                    }`} />
                   </button>
                 );
               })}
             </div>
           </section>
-
-          {/* Step 1.2: Trade Selection (Appears once Department is Selected) */}
-          {planState.department ? (
-            <section className="bg-white border border-stone-200 rounded-xl p-6 sm:p-7 shadow-xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-4 gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-stone-900 text-white text-xs font-mono font-bold flex items-center justify-center">
-                      2
-                    </span>
-                    <h2 className="text-base font-semibold text-stone-900">
-                      Select Trades / Skills <span className="text-rose-600">*</span>
-                    </h2>
-                  </div>
-                  <p className="text-xs text-stone-500 mt-0.5">
-                    Select the sanctioned skills to be conducted (all 63 alphabetical trades).
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto text-xs">
-                  <span className="font-mono-num font-semibold text-stone-900 bg-stone-100 px-2.5 py-1 rounded">
-                    {planState.selectedTrades.length} of 63 Selected
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleSelectAllTrades}
-                    className="px-2.5 py-1 text-stone-700 hover:text-stone-900 underline"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearSelectedTrades}
-                    className="px-2.5 py-1 text-rose-600 hover:text-rose-800 underline"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {/* Trade Search Input */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
-                <input
-                  type="text"
-                  value={tradeSearch}
-                  onChange={(e) => setTradeSearch(e.target.value)}
-                  placeholder="Filter 63 trades (e.g. Robotics, Welding, Cloud, Cooking)..."
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-stone-50 border border-stone-200 rounded-lg outline-none focus:bg-white focus:border-stone-900"
-                />
-              </div>
-
-              {/* 63 Trades Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-96 overflow-y-auto p-2 border border-stone-100 rounded-lg">
-                {visibleTrades.map((tradeName) => {
-                  const isChecked = planState.selectedTrades.includes(tradeName);
-                  const originalIndex = ALL_TRADES.indexOf(tradeName) + 1;
-                  return (
-                    <button
-                      key={tradeName}
-                      type="button"
-                      onClick={() => handleToggleTrade(tradeName)}
-                      className={`p-2.5 rounded-lg border text-left text-xs transition-all flex items-center justify-between gap-2 ${
-                        isChecked 
-                          ? 'border-stone-900 bg-stone-900 text-white font-medium shadow-xs' 
-                          : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className={`font-mono text-[10px] ${isChecked ? 'text-stone-300' : 'text-stone-400'}`}>
-                          {String(originalIndex).padStart(2, '0')}.
-                        </span>
-                        <span className="truncate">{tradeName}</span>
-                      </div>
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                        isChecked ? 'border-white bg-white text-stone-900' : 'border-stone-300 bg-white'
-                      }`}>
-                        {isChecked && <Check className="w-3 h-3 text-stone-900" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleProceedToScreening}
-                  disabled={planState.selectedTrades.length === 0}
-                  className="px-6 py-2.5 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2 shadow-xs"
-                >
-                  <span>Proceed to District & Taluk Exam Centers</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </section>
-          ) : (
-            <div className="p-8 text-center bg-stone-50 border border-stone-200 rounded-xl text-stone-500 text-xs">
-              Please choose either <strong>Directorate of Technical Education (DTE)</strong> or <strong>Industrial Training Department (ITD)</strong> above to load trade options.
-            </div>
-          )}
-
         </div>
       )}
 
@@ -484,27 +345,27 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
             onChangeAllocations={(allocs) => setPlanState(prev => ({ ...prev, screeningAllocations: allocs }))}
           />
 
-          {/* Submission Bar (No Database / Google Sheets UI exposed to user) */}
-          <div className="bg-white border border-stone-200 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-4 gap-3">
+          {/* Submission Bar */}
+          <div className="bg-white border border-[#0e5774]/20 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[#0e5774]/15 pb-4 gap-3">
               <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0e5774] block">
                   Official Proposal Submission
                 </span>
-                <h3 className="text-base font-bold text-stone-900">
+                <h3 className="text-base font-bold text-slate-900">
                   Submit District & Taluk Exam Center Allocations
                 </h3>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  {planState.department} • {planState.selectedTrades.length} Selected Skills • {planState.screeningAllocations.length} Exam Venue(s) ({totalComputersAvailable} PCs)
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {planState.department} · {planState.screeningAllocations.length} Exam Venue(s) ({totalComputersAvailable} PCs)
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-stone-500 uppercase tracking-wider block">Total Estimated Budget</span>
-                <span className="font-mono-num text-lg font-bold text-emerald-900">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Total Estimated Budget</span>
+                <span className="font-mono-num text-lg font-bold text-[#0e5774]">
                   {formatIndianCurrency(screeningTotal)}
                 </span>
                 {screeningTotal > 0 && (
-                  <span className="text-[11px] font-serif-inst italic text-stone-500 block">
+                  <span className="text-[11px] font-serif-inst italic text-slate-500 block">
                     {numberToIndianWords(screeningTotal)}
                   </span>
                 )}
@@ -527,17 +388,17 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
               <button
                 type="button"
                 onClick={() => { setStepValidationError(null); setCurrentStep(1); }}
-                className="w-full sm:w-auto px-4 py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5"
+                className="w-full sm:w-auto px-4 py-2.5 border border-[#0e5774]/30 hover:bg-[#f4f8fa] text-[#0e5774] text-xs font-medium rounded-lg flex items-center justify-center gap-1.5"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Back to Dept & Trades</span>
+                <span>Back to Department</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleDirectSubmit}
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-8 py-3 bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all shadow-sm flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-3 bg-[#0e5774] hover:bg-[#0a4258] disabled:opacity-50 text-white font-semibold text-xs rounded-lg transition-all shadow-sm flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <>

@@ -1,3 +1,10 @@
+export type CompetitionLevel = 'Screening' | 'District' | 'Zonal' | 'State';
+
+export interface QuestionPaperSkillSelection {
+  skill: string;
+  levels: CompetitionLevel[];
+}
+
 export interface VenueAllocation {
   id: string;
   stage: 'screening' | 'district' | 'zonal';
@@ -27,6 +34,7 @@ export interface MultiStagePlanningState {
 export interface SubmissionRecord {
   id: string;
   timestamp: string;
+  moduleType?: 'exam_centres' | 'question_paper';
   department: string;
   selectedTradesCount: number;
   selectedTrades: string[];
@@ -36,6 +44,7 @@ export interface SubmissionRecord {
   zonalVenuesCount: number;
   totalEstimatedAmount: number;
   allocations: VenueAllocation[];
+  questionPaperSelections?: QuestionPaperSkillSelection[];
   syncedToGoogleSheet: boolean;
   sheetRowsAppended?: number;
 }
