@@ -19,7 +19,7 @@ import {
 } from '../types';
 
 const BACKEND_WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbwcdF2_35vNOv1g7kzwqyV2grdYG2j5Ucv-oeqLwRAIuur4qkM3VwJXEQn2Yma2iczhYA/exec';
+  'https://script.google.com/macros/s/AKfycbw6t8bHL9YdKa5zYQmU2UWYdNoh-kJvWkplBJMV0JWCVMUzvsr633GP2i92o7HE7NtYLQ/exec';
 
 const COMPETITION_LEVELS: CompetitionLevel[] = [
   'Screening',
@@ -205,6 +205,20 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
       return;
     }
 
+    if (!coordinatingOfficer.trim() || !contactPhone.trim() || !officialEmail.trim()) {
+      setValidationError(
+        'Please complete all mandatory officer details: Coordinating Officer, Contact Mobile, and Official Email before submitting.'
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (contactPhone.trim().length < 10) {
+      setValidationError('Please enter a valid 10-digit Contact Mobile number.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (selectedSkillEntries.length === 0) {
       setValidationError(
         'No skills or competition levels have been selected. Please select at least one skill and competition level (Screening, District, Zonal, or State).'
@@ -235,7 +249,20 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
     const submissionId = `QP-${Date.now().toString(36).toUpperCase()}`;
     const timestamp = new Date().toISOString();
 
-    // Format each selected skill as an allocation row so the existing backend records every skill & its levels seamlessly
+    const questionPaperRows = ALL_TRADES.map((skill) => {
+      const levels = skillSelections[skill] || [];
+      return {
+        skill,
+        screening: levels.includes('Screening') ? 'Yes' : 'No',
+        district: levels.includes('District') ? 'Yes' : 'No',
+        zonal: levels.includes('Zonal') ? 'Yes' : 'No',
+        state: levels.includes('State') ? 'Yes' : 'No',
+        coordinatingOfficer: coordinatingOfficer.trim(),
+        contactPhone: contactPhone.trim(),
+        email: officialEmail.trim()
+      };
+    });
+
     const formattedAllocations: VenueAllocation[] = selectedSkillEntries.map((entry, idx) => ({
       id: `qp-${idx}-${Date.now()}`,
       stage: 'screening',
@@ -244,13 +271,11 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
       talukName: '-',
       skills: [entry.skill],
       questionPaper: entry.levels.join(', '),
-      venueName: institutionName.trim() || 'Question Paper Preparation Committee',
-      coordinatingOfficer: coordinatingOfficer.trim() || '-',
-      contactPhone: contactPhone.trim() || '-',
-      email: officialEmail.trim() || '-',
-      estimatedAmount: 0,
-      numberOfComputers: entry.levels.length,
-      connectivityDetails: `Question Paper Levels: ${entry.levels.join(', ')}`
+      venueName: 'Question Paper Preparation',
+      coordinatingOfficer: coordinatingOfficer.trim(),
+      contactPhone: contactPhone.trim(),
+      email: officialEmail.trim(),
+      estimatedAmount: 0
     }));
 
     const payload = {
@@ -260,22 +285,24 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
       timestamp,
       moduleType: 'question_paper_preparation',
       department,
+      coordinatingOfficer: coordinatingOfficer.trim(),
+      contactPhone: contactPhone.trim(),
+      email: officialEmail.trim(),
       selectedTrades: selectedSkillEntries.map((e) => e.skill),
       questionPaperSelections: selectedSkillEntries,
+      questionPaperRows,
       unselectedSkillsCount: unselectedSkills.length,
-      allocations: formattedAllocations.map((a) => ({
+      allocations: questionPaperRows.map((row) => ({
         stage: 'question_paper_preparation',
-        stageLabel: a.stageLabel,
-        skills: a.skills,
-        districtOrZoneName: a.districtOrZoneName,
-        talukName: a.talukName,
-        numberOfComputers: a.numberOfComputers,
-        connectivityDetails: a.connectivityDetails,
-        venueName: a.venueName,
-        coordinatingOfficer: a.coordinatingOfficer,
-        contactPhone: a.contactPhone,
-        email: a.email,
-        estimatedAmount: 0
+        skill: row.skill,
+        skills: [row.skill],
+        screening: row.screening,
+        district: row.district,
+        zonal: row.zonal,
+        state: row.state,
+        coordinatingOfficer: row.coordinatingOfficer,
+        contactPhone: row.contactPhone,
+        email: row.email
       }))
     };
 
@@ -441,41 +468,53 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
           </div>
         </div>
 
-        {/* Coordinating Officer Metadata */}
+        {/* Mandatory Coordinating Officer Metadata */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-stone-100 text-xs">
           <div>
             <label className="block font-semibold text-stone-700 mb-1">
-              Coordinating Officer
+              Coordinating Officer <span className="text-rose-600">*</span>
             </label>
             <input
               type="text"
+              required
               value={coordinatingOfficer}
-              onChange={(e) => setCoordinatingOfficer(e.target.value)}
+              onChange={(e) => {
+                setValidationError(null);
+                setCoordinatingOfficer(e.target.value);
+              }}
               placeholder="Officer Name"
               className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none focus:border-[#0e5774]"
             />
           </div>
           <div>
             <label className="block font-semibold text-stone-700 mb-1">
-              Contact Mobile
+              Contact Mobile <span className="text-rose-600">*</span>
             </label>
             <input
               type="tel"
+              required
               maxLength={10}
               value={contactPhone}
-              onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              onChange={(e) => {
+                setValidationError(null);
+                setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10));
+              }}
               placeholder="10-digit mobile"
               className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg font-mono-num outline-none focus:border-[#0e5774]"
             />
           </div>
           <div>
             <label className="block font-semibold text-stone-700 mb-1">
-              Official Email
+              Official Email <span className="text-rose-600">*</span>
             </label>
             <input
               type="email"
+              required
               value={officialEmail}
-              onChange={(e) => setOfficialEmail(e.target.value)}
+              onChange={(e) => {
+                setValidationError(null);
+                setOfficialEmail(e.target.value);
+              }}
               placeholder="committee@dte.gov.in"
               className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none focus:border-[#0e5774]"
             />

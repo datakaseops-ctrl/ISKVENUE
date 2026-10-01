@@ -14,7 +14,7 @@ import { formatIndianCurrency, numberToIndianWords } from '../utils/numberToWord
 /**
  * Predefined Backend Endpoint URL (Hidden from end-users)
  */
-const BACKEND_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwcdF2_35vNOv1g7kzwqyV2grdYG2j5Ucv-oeqLwRAIuur4qkM3VwJXEQn2Yma2iczhYA/exec';
+const BACKEND_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw6t8bHL9YdKa5zYQmU2UWYdNoh-kJvWkplBJMV0JWCVMUzvsr633GP2i92o7HE7NtYLQ/exec';
 
 interface MultiStepPlanningFormProps {
   gasUrl?: string;
@@ -116,8 +116,8 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
 
     const payload = {
       submissionId,
-      sheetName: 'Sheet2',
-      targetSheet: 'Sheet2',
+      sheetName: 'Sheet1',
+      targetSheet: 'Sheet1',
       moduleType: 'exam_centres',
       timestamp: new Date().toISOString(),
       department: planState.department,
