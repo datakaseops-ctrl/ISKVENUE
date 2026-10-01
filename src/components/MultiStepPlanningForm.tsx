@@ -99,11 +99,10 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
         !alloc.connectivityDetails?.trim() ||
         !alloc.coordinatingOfficer.trim() ||
         !alloc.contactPhone.trim() ||
-        !alloc.email.trim() ||
-        !alloc.estimatedAmount
+        !alloc.email.trim()
       ) {
         setStepValidationError(
-          "Please complete District, Taluk, Venue Name, Computers Available, Connectivity Details, Officer, Contact Mobile, Official Email, and Estimated Budget for all allotted District Exam Centers before submitting."
+          "Please complete District, Taluk, Venue Name, Computers Available, Connectivity Details, Officer, Contact Mobile, and Official Email for all allotted District Exam Centers before submitting."
         );
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
@@ -358,17 +357,6 @@ export const MultiStepPlanningForm: React.FC<MultiStepPlanningFormProps> = ({
                 <p className="text-xs text-slate-500 mt-0.5">
                   {planState.department} · {planState.screeningAllocations.length} Exam Venue(s) ({totalComputersAvailable} PCs)
                 </p>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Total Estimated Budget</span>
-                <span className="font-mono-num text-lg font-bold text-[#0e5774]">
-                  {formatIndianCurrency(screeningTotal)}
-                </span>
-                {screeningTotal > 0 && (
-                  <span className="text-[11px] font-serif-inst italic text-slate-500 block">
-                    {numberToIndianWords(screeningTotal)}
-                  </span>
-                )}
               </div>
             </div>
 

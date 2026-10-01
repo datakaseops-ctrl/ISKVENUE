@@ -42,7 +42,6 @@ Department: ${record.department}
 Selected Trades (${record.selectedTradesCount}): ${record.selectedTrades.join(', ')}
 District Exam Centers Allotted: ${record.screeningVenuesCount}
 Total Computers Available: ${record.totalComputersAvailable} PCs
-Total Estimated Budget: ${formatIndianCurrency(record.totalEstimatedAmount)}
 Status: Officially Recorded (${record.allocations.length} venue allocation rows)`;
 
     navigator.clipboard.writeText(summary);
@@ -157,26 +156,8 @@ Status: Officially Recorded (${record.allocations.length} venue allocation rows)
                           </div>
                         )}
                       </div>
-                      <div className="text-right font-mono-num font-semibold text-[#0e5774] whitespace-nowrap">
-                        {formatIndianCurrency(Number(alloc.estimatedAmount))}
-                      </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Cumulative Financial Box */}
-              <div className="p-4 bg-[#f4f8fa] border border-[#0e5774]/25 rounded-lg flex items-center justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0e5774] block">
-                    Total Estimated Execution Budget
-                  </span>
-                  <span className="text-xs font-serif-inst italic text-slate-600">
-                    {numberToIndianWords(record.totalEstimatedAmount)}
-                  </span>
-                </div>
-                <div className="text-right font-mono-num text-xl font-bold text-[#0e5774]">
-                  {formatIndianCurrency(record.totalEstimatedAmount)}
                 </div>
               </div>
             </>
