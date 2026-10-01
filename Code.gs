@@ -1,20 +1,16 @@
 /**
  * Google Apps Script (Code.gs) Backend
- * DTE & ITD Institutional Competition Planning Portal (District & Taluk Online Exam Centers)
+ * Indiaskills Kerala 2026-27 — DTE & ITD Institutional Portal
+ * Populates submissions directly into "Sheet2"
  *
- * HOW TO DEPLOY THIS SCRIPT IN YOUR GOOGLE SHEET:
- * 1. Open your editable Google Sheet in Google Drive.
- * 2. Click Extensions > Apps Script.
- * 3. Replace all code in Code.gs with this script and click Save.
- * 4. Click Deploy > New deployment > Select type: "Web app".
- *    - Execute as: "Me"
- *    - Who has access: "Anyone"
- * 5. Copy the Web App URL (ending in /exec) and set it as VITE_GAS_WEB_APP_URL in Vercel
- *    (or paste it into BACKEND_WEB_APP_URL in src/components/MultiStepPlanningForm.tsx).
- *
- * Target Sheet Columns (14 Columns):
- * [Submission ID, Timestamp, Department, Competition Stage, District, Taluk, Venue / Institution Name, Computers Available, Connectivity & Power Backup Details, Skill(s) Catered, Coordinating Officer, Contact Phone, Official Email, Estimated Amount (INR)]
+ * HOW TO UPDATE YOUR EXISTING DEPLOYMENT (KEEPS THE SAME URL):
+ * 1. Open your Google Sheet -> Extensions > Apps Script.
+ * 2. Replace all code in Code.gs with this script and click Save (Ctrl+S).
+ * 3. Click Deploy > Manage deployments.
+ * 4. Click the Pencil (Edit) icon -> Under "Version", select "New version" -> Click Deploy.
  */
+
+var TARGET_SHEET_NAME = "Sheet2";
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
@@ -46,16 +42,22 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet();
+    var sheetName = data.sheetName || data.targetSheet || TARGET_SHEET_NAME;
+    var sheet = ss.getSheetByName(sheetName);
 
-    // Auto-initialize header row if the sheet is empty
+    // Automatically create "Sheet2" if it does not exist yet
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    // Auto-initialize header row on Sheet2 if it is empty
     if (sheet.getLastRow() === 0) {
       var headers = [
         "Submission ID",
         "Timestamp",
         "Department",
-        "Competition Stage",
-        "District",
+        "Module / Stage",
+        "District / Levels",
         "Taluk",
         "Venue / Institution Name",
         "Computers Available",
@@ -63,13 +65,12 @@ function doPost(e) {
         "Skill(s) Catered",
         "Coordinating Officer",
         "Contact Phone",
-        "Official Email",
-        "Estimated Amount (INR)"
+        "Official Email"
       ];
       sheet.appendRow(headers);
       var headerRange = sheet.getRange(1, 1, 1, headers.length);
       headerRange.setFontWeight("bold");
-      headerRange.setBackground("#1c1917"); // Stone 900
+      headerRange.setBackground("#0e5774");
       headerRange.setFontColor("#ffffff");
       sheet.setFrozenRows(1);
     }
@@ -81,7 +82,7 @@ function doPost(e) {
       "yyyy-MM-dd HH:mm:ss"
     );
 
-    var submissionId = data.submissionId || ("DTE-ITD-" + new Date().getTime());
+    var submissionId = data.submissionId || ("ISK-" + new Date().getTime());
     var department = data.department || "";
     var rowsToAppend = [];
 
@@ -90,17 +91,16 @@ function doPost(e) {
         var alloc = data.allocations[i];
         var skillsCatered = Array.isArray(alloc.skills)
           ? alloc.skills.join(", ")
-          : (alloc.skills || (Array.isArray(data.selectedTrades) ? data.selectedTrades.join(", ") : ""));
+          : (alloc.skills || (Array.isArray(data.selectedTrades) ? data.selectedTrades.join(", ") : "-"));
         var stageName = alloc.stageLabel || "Screening Level (Online Exam)";
         var district = alloc.districtOrZoneName || alloc.district || "-";
         var taluk = alloc.talukName || alloc.taluk || "-";
-        var venue = alloc.venueName || alloc.venue || "";
+        var venue = alloc.venueName || alloc.venue || "-";
         var computers = Number(alloc.numberOfComputers) || alloc.numberOfComputers || 0;
         var connectivity = alloc.connectivityDetails || "-";
-        var officer = alloc.coordinatingOfficer || alloc.officer || "";
-        var phone = alloc.contactPhone || alloc.phone || "";
-        var email = alloc.email || "";
-        var amount = Number(alloc.estimatedAmount) || 0;
+        var officer = alloc.coordinatingOfficer || alloc.officer || "-";
+        var phone = alloc.contactPhone || alloc.phone || "-";
+        var email = alloc.email || "-";
 
         rowsToAppend.push([
           submissionId,
@@ -114,9 +114,8 @@ function doPost(e) {
           connectivity,
           skillsCatered,
           officer,
-          "'" + phone, // Apostrophe preserves 10-digit phone formatting
-          email,
-          amount
+          phone !== "-" ? ("'" + phone) : "-",
+          email
         ]);
       }
     }
@@ -125,21 +124,20 @@ function doPost(e) {
       lock.releaseLock();
       return createJsonResponse({
         status: "error",
-        message: "No valid district exam center allocations found in payload."
+        message: "No valid allocation rows found in payload."
       });
     }
 
     for (var r = 0; r < rowsToAppend.length; r++) {
       sheet.appendRow(rowsToAppend[r]);
-      var currLastRow = sheet.getLastRow();
-      sheet.getRange(currLastRow, 14).setNumberFormat("#,##0.00");
     }
 
     lock.releaseLock();
 
     return createJsonResponse({
       status: "success",
-      message: rowsToAppend.length + " row(s) recorded.",
+      sheetName: sheetName,
+      message: rowsToAppend.length + " row(s) recorded to " + sheetName + ".",
       submissionId: submissionId,
       rowsAppended: rowsToAppend.length,
       timestamp: formattedTimestamp
@@ -158,7 +156,8 @@ function doPost(e) {
 function doGet(e) {
   return createJsonResponse({
     status: "active",
-    service: "DTE & ITD Institutional Planning Backend",
+    targetSheet: TARGET_SHEET_NAME,
+    service: "Indiaskills Kerala 2026-27 Backend",
     timestamp: new Date().toISOString()
   });
 }

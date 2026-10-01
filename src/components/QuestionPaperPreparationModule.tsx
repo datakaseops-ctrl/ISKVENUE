@@ -19,7 +19,7 @@ import {
 } from '../types';
 
 const BACKEND_WEB_APP_URL =
-  'https://script.google.com/macros/s/AKfycbxVz4IN8XGrZ3uxlTvIWsJ4U_NWm8oyS4zFSx42dntF4lsBmZgB-E5F9KYd3mrXP4wp9Q/exec';
+  'https://script.google.com/macros/s/AKfycbwcdF2_35vNOv1g7kzwqyV2grdYG2j5Ucv-oeqLwRAIuur4qkM3VwJXEQn2Yma2iczhYA/exec';
 
 const COMPETITION_LEVELS: CompetitionLevel[] = [
   'Screening',
@@ -255,6 +255,8 @@ export const QuestionPaperPreparationModule: React.FC<QuestionPaperPreparationMo
 
     const payload = {
       submissionId,
+      sheetName: 'Sheet2',
+      targetSheet: 'Sheet2',
       timestamp,
       moduleType: 'question_paper_preparation',
       department,
