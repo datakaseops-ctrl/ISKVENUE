@@ -279,7 +279,7 @@ export const ScreeningExamStageEditor: React.FC<ScreeningExamStageEditorProps> =
                       type="text"
                       value={alloc.coordinatingOfficer}
                       onChange={(e) => handleUpdateField(alloc.id, 'coordinatingOfficer', e.target.value)}
-                      placeholder="e.g. Prof. Anand V. Menon, Chief Superintendent"
+                      placeholder=""
                       className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg outline-none focus:border-[#0e5774]"
                     />
                   </div>
