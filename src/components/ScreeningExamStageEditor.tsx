@@ -98,7 +98,7 @@ export const ScreeningExamStageEditor: React.FC<ScreeningExamStageEditorProps> =
       
       {/* Header Banner */}
       <div className="bg-white border border-[#0e5774]/20 rounded-xl p-5 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[#0e5774]/15 pb-4 mb-4 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0e5774] mb-0.5">
               <span>Step 2 of 2</span>
@@ -121,70 +121,6 @@ export const ScreeningExamStageEditor: React.FC<ScreeningExamStageEditorProps> =
               </span>
             </div>
           </div>
-        </div>
-
-        {/* Add District & Taluk Control Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#f4f8fa] p-3 rounded-lg border border-[#0e5774]/20 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <MapPin className="w-4 h-4 text-[#0e5774] shrink-0" />
-            <span className="font-semibold text-slate-800">Allot Venue in:</span>
-            <select
-              value={selectedDistrictToAdd}
-              onChange={(e) => handleDistrictToAddChange(e.target.value)}
-              aria-label="Select District"
-              className="px-2.5 py-1.5 bg-white border border-[#0e5774]/30 rounded-md font-medium text-xs text-slate-800 outline-none focus:border-[#0e5774]"
-            >
-              {STANDARD_DISTRICTS.map(dist => (
-                <option key={dist} value={dist}>{dist}</option>
-              ))}
-            </select>
-            <select
-              value={selectedTalukToAdd}
-              onChange={(e) => setSelectedTalukToAdd(e.target.value)}
-              aria-label="Select Taluk"
-              className="px-2.5 py-1.5 bg-white border border-[#0e5774]/30 rounded-md font-medium text-xs text-slate-800 outline-none focus:border-[#0e5774]"
-            >
-              {addBarTaluks.map(taluk => (
-                <option key={taluk} value={taluk}>{taluk} Taluk</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => handleAddVenueForDistrict(selectedDistrictToAdd, selectedTalukToAdd)}
-              className="px-3 py-1.5 bg-[#0e5774] hover:bg-[#0a4258] text-white rounded-md font-medium text-xs flex items-center gap-1 shadow-xs transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ Allot Exam Venue</span>
-            </button>
-          </div>
-
-          {/* Filter by district pill bar */}
-          {distinctDistricts.length > 1 && (
-            <div className="flex items-center gap-1 overflow-x-auto max-w-full">
-              <span className="text-slate-500 text-[11px] whitespace-nowrap">Filter:</span>
-              <button
-                type="button"
-                onClick={() => setActiveDistrictFilter('all')}
-                className={`px-2 py-0.5 rounded text-[11px] whitespace-nowrap font-medium ${
-                  activeDistrictFilter === 'all' ? 'bg-[#0e5774] text-white' : 'bg-white text-[#0e5774] border border-[#0e5774]/30'
-                }`}
-              >
-                All ({allocations.length})
-              </button>
-              {distinctDistricts.map(d => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setActiveDistrictFilter(d)}
-                  className={`px-2 py-0.5 rounded text-[11px] whitespace-nowrap font-medium ${
-                    activeDistrictFilter === d ? 'bg-[#0e5774] text-white' : 'bg-white text-[#0e5774] border border-[#0e5774]/30'
-                  }`}
-                >
-                  {d} ({allocations.filter(a => a.districtOrZoneName === d).length})
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -390,14 +326,19 @@ export const ScreeningExamStageEditor: React.FC<ScreeningExamStageEditorProps> =
         })}
       </div>
 
-      {/* Add Another Exam Venue in District Button */}
+      {/* Add Another Exam Venue Button */}
       <button
         type="button"
-        onClick={() => handleAddVenueForDistrict(selectedDistrictToAdd, selectedTalukToAdd)}
+        onClick={() => {
+          const lastAlloc = allocations[allocations.length - 1];
+          const nextDistrict = lastAlloc?.districtOrZoneName || STANDARD_DISTRICTS[0];
+          const nextTaluk = lastAlloc?.talukName || DISTRICT_TALUKS[nextDistrict]?.[0] || '';
+          handleAddVenueForDistrict(nextDistrict, nextTaluk);
+        }}
         className="w-full py-2.5 border-2 border-dashed border-[#0e5774]/35 hover:border-[#0e5774] bg-white hover:bg-[#f4f8fa] text-[#0e5774] text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="w-4 h-4" />
-        <span>Allot Another Exam Venue in {selectedDistrictToAdd} ({selectedTalukToAdd} Taluk)</span>
+        <span>Allot Another Exam Venue</span>
       </button>
 
     </div>
